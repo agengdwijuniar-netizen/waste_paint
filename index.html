@@ -1,0 +1,598 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Monitoring Sisa Cat Terbuang Saat Pergantian Warna</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Chart.js -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .custom-scrollbar::-webkit-scrollbar { width: 6px; height: 6px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f5f9; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* Hide app initially before login */
+        #app { display: none; }
+    </style>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: { 50: '#f0f9ff', 100: '#e0f2fe', 500: '#0ea5e9', 600: '#0284c7', 900: '#0c4a6e' },
+                        danger: { 50: '#fef2f2', 500: '#ef4444', 600: '#dc2626' },
+                        warning: { 500: '#f59e0b', 600: '#d97706' }
+                    }
+                }
+            }
+        }
+    </script>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+    <!-- Login Screen -->
+    <div id="loginScreen" class="fixed inset-0 bg-slate-900 flex items-center justify-center z-50">
+        <div class="bg-white p-8 rounded-xl shadow-2xl max-w-sm w-full mx-4">
+            <div class="text-center mb-8">
+                <svg class="w-12 h-12 text-brand-600 mx-auto mb-3" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                <h2 class="text-2xl font-bold text-slate-800">Admin Login</h2>
+                <p class="text-sm text-slate-500 mt-1">Monitoring Pergantian Warna</p>
+            </div>
+            <form id="loginForm" class="space-y-5">
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Username</label>
+                    <input type="text" id="username" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="admin" required>
+                </div>
+                <div>
+                    <label class="block text-sm font-medium text-slate-700 mb-1">Password</label>
+                    <input type="password" id="password" class="w-full px-4 py-2 border border-slate-300 rounded-lg focus:ring-2 focus:ring-brand-500 focus:outline-none" placeholder="admin" required>
+                </div>
+                <div id="loginError" class="text-sm text-danger-600 hidden font-medium text-center">Username atau Password salah!</div>
+                <button type="submit" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-semibold py-2.5 rounded-lg transition">Login</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Main Dashboard App -->
+    <div id="app" class="flex-col min-h-screen">
+        <!-- Navbar -->
+        <nav class="bg-brand-900 text-white shadow-lg sticky top-0 z-40">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex justify-between h-16">
+                    <div class="flex items-center">
+                        <svg class="w-7 h-7 mr-3 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 11H5m14 0a2 2 0 012 2v6a2 2 0 01-2 2H5a2 2 0 01-2-2v-6a2 2 0 012-2m14 0V9a2 2 0 00-2-2M5 11V9a2 2 0 012-2m0 0V5a2 2 0 012-2h6a2 2 0 012 2v2M7 7h10"></path></svg>
+                        <span class="font-bold text-lg hidden sm:block tracking-wide">Monitoring Sisa Cat <span class="text-brand-400 font-medium">(Pergantian Warna)</span></span>
+                        <span class="font-bold text-lg sm:hidden tracking-wide">Sisa Cat</span>
+                    </div>
+                    <div class="flex items-center space-x-4">
+                        <button onclick="logout()" class="text-sm hover:text-danger-500 transition font-medium flex items-center gap-1">
+                            <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 013-3h4a3 3 0 013 3v1"></path></svg>
+                            Logout
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </nav>
+
+        <!-- Main Content -->
+        <main class="flex-grow max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 w-full">
+            
+            <!-- Summary Bar Keseluruhan -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center">
+                    <div class="p-3 rounded-lg bg-blue-100 text-blue-600 mr-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-500">Total Cat Terbuang</p>
+                        <p class="text-xl font-bold text-slate-800" id="kpiTotalAll">0 <span class="text-sm font-normal text-slate-500">L</span></p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center">
+                    <div class="p-3 rounded-lg bg-indigo-100 text-indigo-600 mr-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-500">Rata-rata per Bulan</p>
+                        <p class="text-xl font-bold text-slate-800" id="kpiAvgMonth">0 <span class="text-sm font-normal text-slate-500">L</span></p>
+                    </div>
+                </div>
+                <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex items-center">
+                    <div class="p-3 rounded-lg bg-green-100 text-green-600 mr-4">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01"></path></svg>
+                    </div>
+                    <div>
+                        <p class="text-sm font-medium text-slate-500">Total Entri Data</p>
+                        <p class="text-xl font-bold text-slate-800" id="kpiTotalEntries">0</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">
+                
+                <!-- Input Form Card -->
+                <div class="lg:col-span-1 bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden flex flex-col h-full">
+                    <div class="bg-slate-100 px-5 py-4 border-b border-slate-200 flex justify-between items-center">
+                        <h2 class="font-semibold text-slate-800" id="formTitle">Input Data Baru</h2>
+                        <button id="cancelEditBtn" class="hidden text-xs text-slate-500 hover:text-danger-600 font-medium bg-slate-200 px-2 py-1 rounded transition" onclick="cancelEdit()">Batal Edit</button>
+                    </div>
+                    <form id="wasteForm" class="p-5 flex-grow flex flex-col gap-4">
+                        <input type="hidden" id="recordId">
+                        
+                        <div>
+                            <label for="tanggal" class="block text-sm font-medium text-slate-600 mb-1">Tanggal</label>
+                            <input type="date" id="tanggal" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 transition shadow-sm">
+                        </div>
+                        
+                        <div>
+                            <label for="jumlah" class="block text-sm font-medium text-slate-600 mb-1">Jumlah (Liter)</label>
+                            <div class="relative">
+                                <input type="number" id="jumlah" step="0.01" min="0.01" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 transition shadow-sm pl-4 pr-14">
+                                <div class="absolute inset-y-0 right-0 flex items-center pr-3 pointer-events-none text-slate-500 font-medium text-sm">Liter</div>
+                            </div>
+                        </div>
+                        
+                        <div class="flex-grow">
+                            <label for="keterangan" class="block text-sm font-medium text-slate-600 mb-1">Keterangan / Warna</label>
+                            <textarea id="keterangan" rows="2" placeholder="Cth: Ganti warna merah ke biru" required class="w-full px-3 py-2 border border-slate-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-500 transition shadow-sm resize-none"></textarea>
+                        </div>
+                        
+                        <button type="submit" id="submitBtn" class="w-full bg-brand-600 hover:bg-brand-700 text-white font-medium py-2.5 rounded-lg transition duration-150 shadow flex justify-center items-center gap-2 mt-auto">
+                            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7H5a2 2 0 00-2 2v9a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-3m-1 4l-3 3m0 0l-3-3m3 3V4"></path></svg>
+                            <span id="submitBtnText">Simpan Data</span>
+                        </button>
+                    </form>
+                </div>
+
+                <!-- Stats & Charts Area -->
+                <div class="lg:col-span-2 flex flex-col gap-6">
+                    <!-- Charts Container -->
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 flex-grow">
+                        <!-- Monthly Fiscal Chart -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[280px]">
+                            <h3 class="text-sm font-semibold text-slate-700 mb-2">Resume Bulanan</h3>
+                            <div class="relative flex-grow w-full h-full">
+                                <canvas id="monthlyChart"></canvas>
+                            </div>
+                        </div>
+                        <!-- Daily Chart -->
+                        <div class="bg-white p-4 rounded-xl shadow-sm border border-slate-200 flex flex-col min-h-[280px]">
+                            <h3 class="text-sm font-semibold text-slate-700 mb-2">Tren Pengiriman Harian (Data Terakhir)</h3>
+                            <div class="relative flex-grow w-full h-full">
+                                <canvas id="dailyChart"></canvas>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Table Section -->
+            <div class="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+                <div class="bg-slate-100 px-5 py-4 border-b border-slate-200 flex justify-between items-center">
+                    <h2 class="font-semibold text-slate-800">Log Aktivitas (Pergantian Warna)</h2>
+                    <span class="text-xs font-medium text-slate-500 bg-white px-2 py-1 rounded border border-slate-200" id="totalRecords">0 Data</span>
+                </div>
+                <div class="overflow-x-auto custom-scrollbar max-h-[400px]">
+                    <table class="w-full text-left border-collapse">
+                        <thead class="sticky top-0 bg-slate-50 border-b border-slate-200 z-10">
+                            <tr class="text-xs uppercase text-slate-500 font-semibold tracking-wider">
+                                <th class="px-5 py-3">Tanggal</th>
+                                <th class="px-5 py-3">Jumlah (Liter)</th>
+                                <th class="px-5 py-3">Keterangan</th>
+                                <th class="px-5 py-3 text-right">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="text-sm divide-y divide-slate-100 text-slate-700">
+                            <!-- Data populated via JS -->
+                        </tbody>
+                    </table>
+                    <!-- Empty State -->
+                    <div id="emptyState" class="hidden flex-col items-center justify-center py-10 text-slate-400">
+                        <svg class="w-10 h-10 mb-3 text-slate-300" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="1" d="M20 13V6a2 2 0 00-2-2H6a2 2 0 00-2 2v7m16 0v5a2 2 0 01-2 2H6a2 2 0 01-2-2v-5m16 0h-2.586a1 1 0 00-.707.293l-2.414 2.414a1 1 0 01-.707.293h-3.172a1 1 0 01-.707-.293l-2.414-2.414A1 1 0 006.586 13H4"></path></svg>
+                        <p>Belum ada data tercatat.</p>
+                    </div>
+                </div>
+            </div>
+
+        </main>
+        
+        <footer class="bg-white border-t border-slate-200 py-4 mt-auto">
+            <div class="max-w-7xl mx-auto px-4 text-center text-sm text-slate-500">
+                &copy; <span id="currentYear"></span> Waste Paint Monitoring. Local Storage DB.
+            </div>
+        </footer>
+    </div>
+
+    <!-- Modals & Overlays -->
+    <!-- Custom Modal for Delete and Validation Error -->
+    <div id="actionModal" class="fixed inset-0 z-50 hidden bg-slate-900 bg-opacity-60 flex items-center justify-center backdrop-blur-sm transition-opacity">
+        <div class="bg-white rounded-xl shadow-xl max-w-sm w-full mx-4 overflow-hidden transform transition-all">
+            <div class="p-6 text-center">
+                <div id="modalIcon" class="w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4">
+                    <!-- Icon replaced dynamically -->
+                </div>
+                <h3 id="modalTitle" class="text-lg font-bold text-slate-800 mb-2">Perhatian</h3>
+                <p id="modalDesc" class="text-sm text-slate-500 mb-6">Pesan detail diletakkan disini.</p>
+                <div id="modalActions" class="flex space-x-3">
+                    <button id="modalBtnCancel" onclick="closeModal()" class="flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition">Tutup</button>
+                    <button id="modalBtnConfirm" class="flex-1 px-4 py-2 bg-danger-600 hover:bg-danger-700 text-white rounded-lg font-medium transition hidden">Ya, Lanjutkan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Notification Toast -->
+    <div id="toast" class="fixed bottom-5 right-5 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-white border-l-4 border-brand-500 shadow-lg rounded px-4 py-3 flex items-center gap-3">
+        <svg id="toastIcon" class="w-6 h-6 text-brand-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
+        <span id="toastMsg" class="text-sm font-medium text-slate-700">Berhasil.</span>
+    </div>
+
+    <script>
+        /* --- CONFIGURATION & STATE --- */
+        const DB_KEY = 'wastePaintFiscalDB';
+        
+        // Define Fiscal Year range for labels
+        const fiscalMonths = [
+            { key: '2026-04', label: "Apr'26" }, { key: '2026-05', label: "Mei'26" },
+            { key: '2026-06', label: "Jun'26" }, { key: '2026-07', label: "Jul'26" },
+            { key: '2026-08', label: "Agt'26" }, { key: '2026-09', label: "Sep'26" },
+            { key: '2026-10', label: "Okt'26" }, { key: '2026-11', label: "Nov'26" },
+            { key: '2026-12', label: "Des'26" }, { key: '2027-01', label: "Jan'27" },
+            { key: '2027-02', label: "Feb'27" }, { key: '2027-03', label: "Mar'27" }
+        ];
+
+        let wasteData = [];
+        let dailyChartInstance = null;
+        let monthlyChartInstance = null;
+        let deleteTargetId = null;
+        let activeMonthStr = '2026-07'; // Default for UI purposes if no data
+
+        /* --- INITIALIZATION --- */
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('currentYear').textContent = new Date().getFullYear();
+            
+            // Check login state
+            if (sessionStorage.getItem('isLoggedIn') === 'true') {
+                showApp();
+            }
+
+            // Init Data
+            initDatabase();
+        });
+
+        function initDatabase() {
+            let stored = localStorage.getItem(DB_KEY);
+            if (!stored) {
+                // Pre-fill initial data matching the exact sums required:
+                // Apr'26: 92.4, Mei'26: 97.4, Jun'26: 100.6
+                const initialData = [
+                    { id: 't1', tanggal: '2026-04-10', jumlah: 42.4, keterangan: 'Pergantian Warna Putih ke Hitam' },
+                    { id: 't2', tanggal: '2026-04-20', jumlah: 50.0, keterangan: 'Pergantian Warna Merah ke Kuning' },
+                    { id: 't3', tanggal: '2026-05-08', jumlah: 47.4, keterangan: 'Pergantian Warna Biru ke Hijau' },
+                    { id: 't4', tanggal: '2026-05-25', jumlah: 50.0, keterangan: 'Pergantian Warna Hitam ke Putih' },
+                    { id: 't5', tanggal: '2026-06-05', jumlah: 50.0, keterangan: 'Pergantian Warna Kuning ke Merah' },
+                    { id: 't6', tanggal: '2026-06-18', jumlah: 50.6, keterangan: 'Pergantian Warna Silver ke Hitam' }
+                ];
+                localStorage.setItem(DB_KEY, JSON.stringify(initialData));
+                wasteData = initialData;
+            } else {
+                wasteData = JSON.parse(stored);
+            }
+            
+            // Set form date to today or a default within fiscal year
+            document.getElementById('tanggal').value = new Date().toISOString().split('T')[0];
+        }
+
+        /* --- LOGIN LOGIC --- */
+        document.getElementById('loginForm').addEventListener('submit', (e) => {
+            e.preventDefault();
+            const u = document.getElementById('username').value;
+            const p = document.getElementById('password').value;
+            if (u === 'admin' && p === 'admin') {
+                sessionStorage.setItem('isLoggedIn', 'true');
+                showApp();
+            } else {
+                document.getElementById('loginError').classList.remove('hidden');
+            }
+        });
+
+        function showApp() {
+            document.getElementById('loginScreen').style.display = 'none';
+            document.getElementById('app').style.display = 'flex';
+            refreshUI();
+        }
+
+        function logout() {
+            sessionStorage.removeItem('isLoggedIn');
+            document.getElementById('app').style.display = 'none';
+            document.getElementById('loginScreen').style.display = 'flex';
+            document.getElementById('loginForm').reset();
+            document.getElementById('loginError').classList.add('hidden');
+        }
+
+        /* --- CORE LOGIC & VALIDATION --- */
+        function saveData() {
+            localStorage.setItem(DB_KEY, JSON.stringify(wasteData));
+        }
+
+        // Calculate total for a specific YYYY-MM, ignoring a specific ID (useful for edit validation)
+        function getMonthTotal(yearMonth, excludeId = null) {
+            return wasteData.reduce((sum, item) => {
+                if (item.tanggal.startsWith(yearMonth) && item.id !== excludeId) {
+                    return sum + item.jumlah;
+                }
+                return sum;
+            }, 0);
+        }
+
+        document.getElementById('wasteForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const id = document.getElementById('recordId').value;
+            const tanggal = document.getElementById('tanggal').value;
+            const jumlah = parseFloat(document.getElementById('jumlah').value);
+            const keterangan = document.getElementById('keterangan').value;
+            
+            const monthPrefix = tanggal.substring(0, 7);
+            
+            if (id) {
+                // Update
+                const index = wasteData.findIndex(item => item.id === id);
+                if (index !== -1) {
+                    wasteData[index] = { id, tanggal, jumlah, keterangan };
+                    showToast('Data berhasil diperbarui');
+                }
+            } else {
+                // Create
+                const newRecord = {
+                    id: 'r' + Date.now().toString(),
+                    tanggal,
+                    jumlah,
+                    keterangan
+                };
+                wasteData.push(newRecord);
+                showToast('Data berhasil disimpan');
+            }
+
+            // Update active viewing month based on input
+            activeMonthStr = monthPrefix;
+            
+            saveData();
+            refreshUI();
+            this.reset();
+            cancelEdit();
+        });
+
+        /* --- UI & RENDER FUNCTIONS --- */
+        
+        function editRecord(id) {
+            const record = wasteData.find(item => item.id === id);
+            if (record) {
+                document.getElementById('recordId').value = record.id;
+                document.getElementById('tanggal').value = record.tanggal;
+                document.getElementById('jumlah').value = record.jumlah;
+                document.getElementById('keterangan').value = record.keterangan;
+                
+                document.getElementById('formTitle').textContent = 'Edit Data';
+                document.getElementById('submitBtnText').textContent = 'Update Data';
+                document.getElementById('cancelEditBtn').classList.remove('hidden');
+                window.scrollTo({ top: 0, behavior: 'smooth' });
+            }
+        }
+
+        function cancelEdit() {
+            document.getElementById('wasteForm').reset();
+            document.getElementById('recordId').value = '';
+            document.getElementById('formTitle').textContent = 'Input Data Baru';
+            document.getElementById('submitBtnText').textContent = 'Simpan Data';
+            document.getElementById('cancelEditBtn').classList.add('hidden');
+        }
+
+        function formatDate(dateString) {
+            const options = { year: 'numeric', month: 'short', day: 'numeric' };
+            return new Date(dateString).toLocaleDateString('id-ID', options);
+        }
+
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            const emptyState = document.getElementById('emptyState');
+            tbody.innerHTML = '';
+            
+            if (wasteData.length === 0) {
+                emptyState.classList.remove('hidden');
+                emptyState.classList.add('flex');
+            } else {
+                emptyState.classList.add('hidden');
+                emptyState.classList.remove('flex');
+                
+                // Sort Descending
+                const sortedData = [...wasteData].sort((a, b) => new Date(b.tanggal) - new Date(a.tanggal));
+                
+                sortedData.forEach(item => {
+                    const tr = document.createElement('tr');
+                    tr.className = 'hover:bg-slate-100 transition border-b border-slate-100 last:border-0';
+                    tr.innerHTML = `
+                        <td class="px-5 py-3 whitespace-nowrap text-slate-700">${formatDate(item.tanggal)}</td>
+                        <td class="px-5 py-3 font-semibold text-slate-800">${item.jumlah.toFixed(2)}</td>
+                        <td class="px-5 py-3 truncate max-w-xs text-slate-600" title="${item.keterangan}">${item.keterangan}</td>
+                        <td class="px-5 py-3 whitespace-nowrap text-right text-sm font-medium">
+                            <button onclick="editRecord('${item.id}')" class="text-blue-600 hover:text-blue-900 bg-blue-50 hover:bg-blue-100 p-1.5 rounded mr-2 transition" title="Edit">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15.232 5.232l3.536 3.536m-2.036-5.036a2.5 2.5 0 113.536 3.536L6.5 21.036H3v-3.572L16.732 3.732z"></path></svg>
+                            </button>
+                            <button onclick="promptDelete('${item.id}')" class="text-danger-600 hover:text-danger-900 bg-red-50 hover:bg-red-100 p-1.5 rounded transition" title="Hapus">
+                                <svg class="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"></path></svg>
+                            </button>
+                        </td>
+                    `;
+                    tbody.appendChild(tr);
+                });
+            }
+            document.getElementById('totalRecords').textContent = `${wasteData.length} Data`;
+        }
+
+        function calculateKPIs() {
+            // Calculate totals for summary bar
+            const totalKeseluruhan = wasteData.reduce((sum, item) => sum + item.jumlah, 0);
+            
+            // Get unique months to calculate average per month
+            const uniqueMonths = new Set(wasteData.map(item => item.tanggal.substring(0, 7)));
+            const monthCount = uniqueMonths.size || 1; // Avoid division by zero
+            const avgPerBulan = totalKeseluruhan / monthCount;
+
+            document.getElementById('kpiTotalAll').innerHTML = `${totalKeseluruhan.toFixed(2)} <span class="text-sm font-normal text-slate-500">L</span>`;
+            document.getElementById('kpiAvgMonth').innerHTML = `${avgPerBulan.toFixed(2)} <span class="text-sm font-normal text-slate-500">L/Bln</span>`;
+            document.getElementById('kpiTotalEntries').textContent = wasteData.length;
+        }
+
+        function renderCharts() {
+            /* 1. MONTHLY FISCAL CHART (Bar) */
+            const monthlyLabels = fiscalMonths.map(m => m.label);
+            const monthlyValues = fiscalMonths.map(m => getMonthTotal(m.key));
+
+            if (monthlyChartInstance) monthlyChartInstance.destroy();
+            const ctxMonthly = document.getElementById('monthlyChart').getContext('2d');
+            monthlyChartInstance = new Chart(ctxMonthly, {
+                type: 'bar',
+                data: {
+                    labels: monthlyLabels,
+                    datasets: [
+                        {
+                            type: 'bar',
+                            label: 'Volume Terbuang (L)',
+                            data: monthlyValues,
+                            backgroundColor: '#0284c7',
+                            borderRadius: 4,
+                            barThickness: 'flex',
+                            maxBarThickness: 40
+                        }
+                    ]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                        tooltip: { backgroundColor: 'rgba(15, 23, 42, 0.9)' }
+                    },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Liter' }, grid: { borderDash: [2, 4] } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+
+            /* 2. DAILY TREND CHART (Recent data) */
+            // Show last 14 entries sorted by date
+            const sortedByDate = [...wasteData].sort((a, b) => new Date(a.tanggal) - new Date(b.tanggal));
+            // Group by exact date
+            const dailyMap = {};
+            sortedByDate.forEach(item => {
+                dailyMap[item.tanggal] = (dailyMap[item.tanggal] || 0) + item.jumlah;
+            });
+            const dailyLabels = Object.keys(dailyMap).slice(-15);
+            const dailyValues = dailyLabels.map(d => dailyMap[d]);
+
+            if (dailyChartInstance) dailyChartInstance.destroy();
+            const ctxDaily = document.getElementById('dailyChart').getContext('2d');
+            dailyChartInstance = new Chart(ctxDaily, {
+                type: 'line',
+                data: {
+                    labels: dailyLabels.map(d => formatDate(d)),
+                    datasets: [{
+                        label: 'Pengiriman Harian (L)',
+                        data: dailyValues,
+                        borderColor: '#0ea5e9',
+                        backgroundColor: 'rgba(14, 165, 233, 0.1)',
+                        borderWidth: 2,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#0ea5e9',
+                        pointBorderWidth: 2,
+                        pointRadius: 4,
+                        fill: true, tension: 0.3
+                    }]
+                },
+                options: {
+                    responsive: true, maintainAspectRatio: false,
+                    plugins: { legend: { display: false } },
+                    scales: {
+                        y: { beginAtZero: true, title: { display: true, text: 'Liter' } },
+                        x: { grid: { display: false } }
+                    }
+                }
+            });
+        }
+
+        function refreshUI() {
+            renderTable();
+            calculateKPIs();
+            renderCharts();
+        }
+
+        /* --- MODALS & NOTIFICATIONS --- */
+        function showModal(type, title, desc, onConfirm = null) {
+            const modal = document.getElementById('actionModal');
+            const iconContainer = document.getElementById('modalIcon');
+            const btnConfirm = document.getElementById('modalBtnConfirm');
+            const btnCancel = document.getElementById('modalBtnCancel');
+
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalDesc').innerHTML = desc;
+
+            if (type === 'error') {
+                iconContainer.className = 'w-16 h-16 rounded-full bg-red-100 text-red-600 flex items-center justify-center mx-auto mb-4';
+                iconContainer.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>`;
+                btnConfirm.classList.add('hidden');
+                btnCancel.textContent = 'Tutup';
+                btnCancel.classList.replace('bg-slate-100', 'bg-red-100');
+                btnCancel.classList.replace('hover:bg-slate-200', 'hover:bg-red-200');
+                btnCancel.classList.replace('text-slate-700', 'text-red-700');
+            } else if (type === 'warning') {
+                iconContainer.className = 'w-16 h-16 rounded-full bg-orange-100 text-orange-600 flex items-center justify-center mx-auto mb-4';
+                iconContainer.innerHTML = `<svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z"></path></svg>`;
+                btnConfirm.classList.remove('hidden');
+                btnCancel.textContent = 'Batal';
+                btnCancel.className = 'flex-1 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 rounded-lg font-medium transition';
+                
+                // Remove old listeners
+                const newConfirm = btnConfirm.cloneNode(true);
+                btnConfirm.parentNode.replaceChild(newConfirm, btnConfirm);
+                newConfirm.addEventListener('click', () => {
+                    if (onConfirm) onConfirm();
+                    closeModal();
+                });
+            }
+            
+            modal.classList.remove('hidden');
+        }
+
+        function closeModal() {
+            document.getElementById('actionModal').classList.add('hidden');
+            deleteTargetId = null;
+        }
+
+        function promptDelete(id) {
+            deleteTargetId = id;
+            showModal('warning', 'Hapus Data?', 'Data yang dihapus tidak dapat dikembalikan. Apakah Anda yakin?', () => {
+                if (deleteTargetId) {
+                    wasteData = wasteData.filter(item => item.id !== deleteTargetId);
+                    saveData();
+                    refreshUI();
+                    showToast('Data berhasil dihapus');
+                }
+            });
+        }
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').textContent = message;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => { toast.classList.add('translate-y-20', 'opacity-0'); }, 3000);
+        }
+
+    </script>
+</body>
+</html>
